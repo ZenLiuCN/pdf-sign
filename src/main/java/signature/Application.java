@@ -5,7 +5,6 @@ import io.netty.util.ReferenceCountUtil;
 import reactor.netty.http.server.HttpServer;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -14,8 +13,7 @@ import java.util.Optional;
  */
 public interface Application {
     static void main(String[] args) {
-        var serv = new SignatureService() {
-        };
+        var serv = new ITextSign();
         var http = HttpServer.create()
                 .port(Optional.of(System.getProperty("sign.port")).map(Integer::parseInt).orElse(8080))
                 .route(routes -> routes.post("/sign", (q, r) ->
@@ -25,15 +23,14 @@ public interface Application {
                                             var file = buf.readSlice(buf.readIntLE());
                                             var sign = buf.readSlice(buf.readIntLE());
                                             var signKey = buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8);
-                                            var date = buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8);
-                                            var dateKey = buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8);
+
                                             var seal = buf.readSlice(buf.readIntLE());
                                             var sealKey = buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8);
-                                            return serv.sign(file, List.of(
-                                                    new SignatureService.ImageKeyword(sign, signKey),
-                                                    new SignatureService.ImageKeyword(seal, sealKey),
-                                                    new SignatureService.TextKeyword(date, dateKey, "STSong-Light", 12)
-                                            ));
+
+                                            var date = buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8);
+                                            var dateKey = buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8);
+
+                                            return serv.sign(file, sign, signKey, seal, sealKey, date, dateKey);
                                         }))
 
                         )
