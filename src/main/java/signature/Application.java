@@ -21,19 +21,23 @@ public interface Application {
                                 r.send(q.receive().aggregate()
                                         .doOnDiscard(ByteBuf.class, ReferenceCountUtil::release)
                                         .flatMap(buf -> {
-                                            var file = buf.readSlice(buf.readIntLE());
-                                            var sign = buf.readSlice(buf.readIntLE());
-                                            var signKey = buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8);
-
-                                            var seal = buf.readSlice(buf.readIntLE());
-                                            var sealKey = buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8);
-
-                                            var date = buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8);
-                                            var dateKey = buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8);
+                                            var file = buf.readSlice(buf.readIntLE()).retain();
+                                            var sn = buf.readIntLE();
+                                            var sign = sn > 0 ? buf.readSlice(sn).retain() : null;
+                                            var snk = buf.readIntLE();
+                                            var signKey = snk > 0 ? buf.readSlice(snk).toString(StandardCharsets.UTF_8) : null;
+                                            var sen = buf.readIntLE();
+                                            var seal = sen > 0 ? buf.readSlice(sen).retain() : null;
+                                            var sekn = buf.readIntLE();
+                                            var sealKey = sekn > 0 ? buf.readSlice(sekn).toString(StandardCharsets.UTF_8) : null;
+                                            var dn = buf.readIntLE();
+                                            var date = dn > 0 ? buf.readSlice(dn).toString(StandardCharsets.UTF_8) : null;
+                                            var dkn=buf.readIntLE();
+                                            var dateKey = dkn>0? buf.readSlice(dkn).toString(StandardCharsets.UTF_8):null;
                                             var form = new HashMap<String, String>();
                                             {
                                                 var n = buf.readIntLE();
-                                                if (n == 0) {
+                                                if (n <= 0) {
                                                     form = null;
                                                 } else {
                                                     for (int i = 0; i < n; i++) {
