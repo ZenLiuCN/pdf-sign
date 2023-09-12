@@ -5,6 +5,7 @@ import io.netty.util.ReferenceCountUtil;
 import reactor.netty.http.server.HttpServer;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Optional;
 
 /**
@@ -29,8 +30,19 @@ public interface Application {
 
                                             var date = buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8);
                                             var dateKey = buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8);
+                                            var form = new HashMap<String, String>();
+                                            {
+                                                var n = buf.readIntLE();
+                                                if (n == 0) {
+                                                    form = null;
+                                                } else {
+                                                    for (int i = 0; i < n; i++) {
+                                                        form.put(buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8), buf.readSlice(buf.readIntLE()).toString(StandardCharsets.UTF_8));
+                                                    }
+                                                }
+                                            }
 
-                                            return serv.sign(file, sign, signKey, seal, sealKey, date, dateKey);
+                                            return serv.sign(file, sign, signKey, seal, sealKey, date, dateKey, form);
                                         }))
 
                         )

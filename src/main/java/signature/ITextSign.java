@@ -1,5 +1,6 @@
 package signature;
 
+import com.itextpdf.forms.fields.PdfFormCreator;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.Rectangle;
@@ -15,9 +16,11 @@ import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
 import io.netty.buffer.*;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -25,7 +28,24 @@ import java.util.Optional;
  * @since 2023-09-08
  */
 public class ITextSign implements SignatureService {
+    record Form(
+            Map<String, String> values
+    ) implements Operate {
 
+        @Override
+        public void process(PdfDocument doc, PdfPage page, Canvas canvas) throws Exception {
+            var form = PdfFormCreator.getAcroForm(doc, false);
+            if (form == null) return;
+            form.getAllFormFields().forEach((name, field) -> {
+                var val = values.get(name);
+                if (val != null) {
+                    field.setValue(val)
+                            .setReadOnly(true);
+                }
+            });
+
+        }
+    }
 
     record ImageKeyword(
             ByteBuf image,
@@ -42,6 +62,7 @@ public class ITextSign implements SignatureService {
             var image = new Image(data);
             image.setFixedPosition(rect.getRight(), rect.getTop() - image.getImageHeight(), image.getWidth());
             canvas.add(image);
+            this.image.release();
         }
     }
 
@@ -118,11 +139,24 @@ public class ITextSign implements SignatureService {
     }
 
     @Override
-    public Mono<ByteBuf> sign(ByteBuf file, ByteBuf sign, String signKeyword, ByteBuf seal, String sealKeyword, String date, String dateKeyword) {
-        return sign(file, List.of(
-                new ImageKeyword(sign, signKeyword),
-                new ImageKeyword(seal, sealKeyword),
-                new TextKeyword(date, dateKeyword, "STSong-Light", 12)
-        ));
+    public Mono<ByteBuf> sign(ByteBuf file, @Nullable ByteBuf sign, @Nullable String signKeyword, @Nullable ByteBuf seal, @Nullable String sealKeyword, @Nullable String date, @Nullable String dateKeyword, @Nullable Map<String, String> forms) {
+        var ops = new ArrayList<Operate>();
+        if (forms != null && !forms.isEmpty()) {
+            ops.add(new Form(forms));
+        }
+        if (sign != null && signKeyword != null) {
+            ops.add(new ImageKeyword(sign, signKeyword));
+        }
+        if (seal != null && sealKeyword != null) {
+            ops.add(new ImageKeyword(seal, sealKeyword));
+        }
+        if (date != null && dateKeyword != null) {
+            ops.add(new TextKeyword(date, dateKeyword, "STSong-Light", 12));
+        }
+        try {
+            return sign(file, ops);
+        } finally {
+            file.release();
+        }
     }
 }

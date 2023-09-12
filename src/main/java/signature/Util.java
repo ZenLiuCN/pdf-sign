@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.util.Map;
 
 /**
  * @author Zen.Liu
@@ -37,7 +38,7 @@ public interface Util {
         }
     }
 
-    static ByteBuf encode(File pdf, File signature, String signatureKeyword, File seal, String sealKeyword, String date, String dateKeyword) throws IOException {
+    static ByteBuf encode(File pdf, File signature, String signatureKeyword, File seal, String sealKeyword, String date, String dateKeyword, Map<String, String> forms) throws IOException {
         ByteBuf pdfBuf, signBuf, sealBuf;
         try (var fileInputStream = new FileInputStream(pdf)) {
             var fileChannel = fileInputStream.getChannel();
@@ -63,6 +64,23 @@ public interface Util {
         var dateBuf = ByteBufAllocator.DEFAULT.buffer();
         dateBuf.writeCharSequence(date, StandardCharsets.UTF_8);
         var full = ByteBufAllocator.DEFAULT.buffer();
+        var form = ByteBufAllocator.DEFAULT.buffer();
+        var fn = 0;
+        if (forms != null && !forms.isEmpty()) {
+            fn = forms.size();
+            forms.forEach((k, v) -> {
+                var key = ByteBufAllocator.DEFAULT.buffer();
+                var nk = key.writeCharSequence(k, StandardCharsets.UTF_8);
+                var val = ByteBufAllocator.DEFAULT.buffer();
+                var nv = val.writeCharSequence(v, StandardCharsets.UTF_8);
+                form
+                        .writeIntLE(nk).writeBytes(key)
+                        .writeIntLE(nv).writeBytes(val)
+                ;
+                key.release();
+                val.release();
+            });
+        }
         full
                 .writeIntLE(pdfBuf.readableBytes()).writeBytes(pdfBuf)
                 .writeIntLE(signBuf.readableBytes()).writeBytes(signBuf)
@@ -71,6 +89,7 @@ public interface Util {
                 .writeIntLE(sealKey.readableBytes()).writeBytes(sealKey)
                 .writeIntLE(dateBuf.readableBytes()).writeBytes(dateBuf)
                 .writeIntLE(dateKey.readableBytes()).writeBytes(dateKey)
+                .writeIntLE(fn).writeBytes(form)
         ;
         sealKey.release();
         sealBuf.release();
@@ -79,6 +98,7 @@ public interface Util {
         signKey.release();
         signBuf.release();
         pdfBuf.release();
+        form.release();
         return full;
     }
 }
