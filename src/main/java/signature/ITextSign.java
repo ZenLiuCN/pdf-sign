@@ -49,7 +49,8 @@ public class ITextSign implements SignatureService {
 
     record ImageKeyword(
             ByteBuf image,
-            String keyword
+            String keyword,
+            int offset
     ) implements Operate {
         @Override
         public void process(PdfDocument doc, PdfPage page, Canvas canvas) throws Exception {
@@ -60,7 +61,7 @@ public class ITextSign implements SignatureService {
             var data = ImageDataFactory.create(ByteBufUtil.getBytes(this.image));
             data.setInverted(true);
             var image = new Image(data);
-            image.setFixedPosition(rect.getRight(), rect.getTop() - image.getImageHeight(), image.getWidth());
+            image.setFixedPosition(rect.getRight(), rect.getTop() - image.getImageHeight() + offset, image.getWidth());
             canvas.add(image);
             this.image.release();
         }
@@ -145,10 +146,10 @@ public class ITextSign implements SignatureService {
             ops.add(new Form(forms));
         }
         if (sign != null && signKeyword != null) {
-            ops.add(new ImageKeyword(sign, signKeyword));
+            ops.add(new ImageKeyword(sign, signKeyword, 0));
         }
         if (seal != null && sealKeyword != null) {
-            ops.add(new ImageKeyword(seal, sealKeyword));
+            ops.add(new ImageKeyword(seal, sealKeyword, 30));
         }
         if (date != null && dateKeyword != null) {
             ops.add(new TextKeyword(date, dateKeyword, "STSong-Light", 12));
