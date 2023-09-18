@@ -38,7 +38,15 @@ public interface Util {
         }
     }
 
-    static ByteBuf encode(File pdf, File signature, String signatureKeyword, File seal, String sealKeyword, String date, String dateKeyword, Map<String, String> forms) throws IOException {
+    static ByteBuf encode(File pdf,
+                          File signature,
+                          String signatureKeyword,
+                          File seal,
+                          String sealKeyword,
+                          String date,
+                          String dateKeyword,
+                          String font,
+                          Map<String, String> forms) throws IOException {
         ByteBuf pdfBuf, signBuf, sealBuf;
         try (var fileInputStream = new FileInputStream(pdf)) {
             var fileChannel = fileInputStream.getChannel();
@@ -61,6 +69,9 @@ public interface Util {
         sealKey.writeCharSequence(sealKeyword, StandardCharsets.UTF_8);
         var dateKey = ByteBufAllocator.DEFAULT.buffer();
         dateKey.writeCharSequence(dateKeyword, StandardCharsets.UTF_8);
+        var dateFont = ByteBufAllocator.DEFAULT.buffer();
+        if (font != null) dateFont.writeCharSequence(font, StandardCharsets.UTF_8);
+
         var dateBuf = ByteBufAllocator.DEFAULT.buffer();
         dateBuf.writeCharSequence(date, StandardCharsets.UTF_8);
         var full = ByteBufAllocator.DEFAULT.buffer();
@@ -89,6 +100,7 @@ public interface Util {
                 .writeIntLE(sealKey.readableBytes()).writeBytes(sealKey)
                 .writeIntLE(dateBuf.readableBytes()).writeBytes(dateBuf)
                 .writeIntLE(dateKey.readableBytes()).writeBytes(dateKey)
+                .writeIntLE(dateFont.readableBytes()).writeBytes(dateFont)
                 .writeIntLE(fn).writeBytes(form)
         ;
         sealKey.release();

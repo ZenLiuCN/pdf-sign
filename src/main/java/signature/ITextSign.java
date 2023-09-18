@@ -106,7 +106,7 @@ public class ITextSign implements SignatureService {
         var f = Paths.get("./fonts").toAbsolutePath();
         if (f.toFile().exists()) {
             PdfFontFactory.registerDirectory(f.toString());
-            log.info("fonts: {}", PdfFontFactory.getRegisteredFonts());
+//            log.info("fonts: {}", PdfFontFactory.getRegisteredFonts());
         }
     }
 
@@ -161,14 +161,22 @@ public class ITextSign implements SignatureService {
     }
 
     @Override
-    public Mono<ByteBuf> sign(ByteBuf file, @Nullable ByteBuf sign, @Nullable String signKeyword, @Nullable ByteBuf seal, @Nullable String sealKeyword, @Nullable String date, @Nullable String dateKeyword, @Nullable Map<String, String> forms) {
+    public Mono<ByteBuf> sign(ByteBuf file,
+                              @Nullable ByteBuf sign,
+                              @Nullable String signKeyword,
+                              @Nullable ByteBuf seal,
+                              @Nullable String sealKeyword,
+                              @Nullable String date,
+                              @Nullable String dateKeyword,
+                              @Nullable String font,
+                              @Nullable Map<String, String> forms) {
         var ops = new ArrayList<Operate>();
 
         if (forms != null && !forms.isEmpty()) {
             ops.add(new Form(forms));
         }
         if (date != null && dateKeyword != null) {
-            ops.add(new TextKeyword(date, dateKeyword, "STSONG", 12));
+            ops.add(new TextKeyword(date, dateKeyword, font == null ? "STSong-Light" : font, 12));
         }
 
         if (sign != null && signKeyword != null) {
@@ -183,5 +191,10 @@ public class ITextSign implements SignatureService {
         } finally {
             file.release();
         }
+    }
+
+    @Override
+    public List<String> fonts() {
+        return new ArrayList<>(PdfFontFactory.getRegisteredFonts());
     }
 }
