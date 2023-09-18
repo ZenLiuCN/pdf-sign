@@ -16,7 +16,7 @@ public interface Application {
     static void main(String[] args) {
         var serv = new ITextSign();
         var http = HttpServer.create()
-                .port(Optional.of(System.getProperty("sign.port")).map(Integer::parseInt).orElse(8080))
+                .port(Optional.ofNullable(System.getProperty("sign.port")).map(Integer::parseInt).orElse(8080))
                 .route(routes -> routes.post("/sign", (q, r) ->
                                 r.send(q.receive().aggregate()
                                         .doOnDiscard(ByteBuf.class, ReferenceCountUtil::release)
